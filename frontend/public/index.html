@@ -22,6 +22,16 @@
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
         <title>Sistema de Escalas Distritais</title>
+        <script>
+            // Suppress ResizeObserver error (known issue with Radix UI)
+            window.addEventListener('error', function(e) {
+                if (e.message === 'ResizeObserver loop completed with undelivered notifications.' ||
+                    e.message === 'ResizeObserver loop limit exceeded') {
+                    e.stopImmediatePropagation();
+                    e.preventDefault();
+                }
+            });
+        </script>
         <script src="https://assets.emergent.sh/scripts/emergent-main.js"></script>
         <!--
         These two scripts have been added for the testing, please do not edit or remove them
