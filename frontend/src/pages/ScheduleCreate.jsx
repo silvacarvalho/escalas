@@ -40,10 +40,10 @@ export default function ScheduleCreate() {
   }, []);
 
   useEffect(() => {
-    if (districtId) {
+    if (districtId && churches.length > 0) {
       loadChurchesForDistrict();
     }
-  }, [districtId, month, year]);
+  }, [districtId, month, year, churches]);
 
   const loadData = async () => {
     try {
@@ -59,6 +59,8 @@ export default function ScheduleCreate() {
   };
 
   const loadChurchesForDistrict = async () => {
+    if (!districtId || churches.length === 0) return;
+    
     try {
       const schedulesRes = await axios.get(`${API}/schedules?month=${month}&year=${year}&district_id=${districtId}`);
       const existingSchedules = schedulesRes.data;
@@ -71,6 +73,7 @@ export default function ScheduleCreate() {
       setAvailableChurches(districtChurches);
     } catch (error) {
       console.error('Error loading churches:', error);
+      toast.error('Erro ao carregar igrejas disponíveis');
     }
   };
 
