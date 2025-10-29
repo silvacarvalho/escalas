@@ -191,10 +191,10 @@ backend:
 
 frontend:
   - task: "Correção Dependência react-day-picker"
-    implemented: false
-    working: false
-    file: "frontend/package.json"
-    stuck_count: 1
+    implemented: true
+    working: true
+    file: "frontend/package.json, frontend/src/components/ui/calendar.jsx"
+    stuck_count: 0
     priority: "high"
     needs_retesting: true
     status_history:
@@ -204,6 +204,32 @@ frontend:
           ERRO CRÍTICO: react-day-picker@8.10.1 requer react@^16.8.0||^17.0.0||^18.0.0
           Projeto usa react@19.0.0
           Solução pendente: atualizar react-day-picker ou substituir componente
+      - working: true
+        agent: "main"
+        comment: |
+          ✅ PROBLEMA RESOLVIDO:
+          - Atualizado react-day-picker de 8.10.1 para ^9.11.1
+          - Migrado componente Calendar para API v9 do react-day-picker
+          - Atualizados classNames: nav_button → button_previous/button_next, table → month_grid, etc
+          - Atualizado components: IconLeft/IconRight → Chevron com orientation
+          - Yarn install executado com sucesso
+          - Frontend compilou com sucesso
+          
+  - task: "Correção Erro JSX Analytics.jsx"
+    implemented: true
+    working: true
+    file: "frontend/src/pages/Analytics.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          Corrigido erro de parsing JSX na linha 271:
+          - Problema: Caractere '<' em string JSX sem escape
+          - Solução: Alterado "score < 60" para "score {'<'} 60"
+          - Frontend compilou sem erros
 
 metadata:
   created_by: "main_agent"
