@@ -239,17 +239,19 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Migração PostgreSQL - Server.py Endpoints"
-    - "Scripts de Inicialização"
-    - "Correção Dependência react-day-picker"
-  stuck_tasks:
-    - "Correção Dependência react-day-picker"
+    - "Testes Backend PostgreSQL (usuário local)"
+    - "Testes Frontend Completo"
+    - "Testes Integração Backend + Frontend"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
   notes: |
+    ✅ Backend PostgreSQL: Implementado e pronto para testes locais
+    ✅ Frontend: Dependências corrigidas, compilando com sucesso
+    
     PostgreSQL está disponível na máquina local do usuário (não no ambiente Emergent).
-    Testes do backend serão realizados pelo usuário localmente.
-    Frontend precisa correção de dependências antes de testes.
+    Testes do backend serão realizados pelo usuário localmente usando os scripts fornecidos.
+    Frontend pode ser testado agora (servidor rodando na porta 3000).
 
 agent_communication:
   - agent: "main"
