@@ -34,8 +34,8 @@ class Usuario(Base):
     ativo = Column(Boolean, default=True)
     
     # Relacionamentos
-    distrito = relationship("Distrito", back_populates="usuarios")
-    igreja = relationship("Igreja", back_populates="usuarios")
+    distrito = relationship("Distrito", foreign_keys=[id_distrito], back_populates="usuarios")
+    igreja = relationship("Igreja", foreign_keys=[id_igreja], back_populates="usuarios")
     avaliacoes_recebidas = relationship("Avaliacao", back_populates="usuario_avaliado", foreign_keys="Avaliacao.id_usuario_avaliado")
     notificacoes = relationship("Notificacao", back_populates="usuario")
 
