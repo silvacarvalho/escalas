@@ -268,7 +268,7 @@ export default function Analytics() {
                 <p className="text-2xl font-bold text-red-600">
                   {analytics.top_preachers ? analytics.top_preachers.filter(p => p.preacher_score < 60).length : 0}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">Pregadores com score < 60</p>
+                <p className="text-xs text-gray-500 mt-1">Pregadores com score {'<'} 60</p>
               </div>
             </div>
           </CardContent>
