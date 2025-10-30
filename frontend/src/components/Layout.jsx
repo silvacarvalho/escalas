@@ -87,6 +87,7 @@ export default function Layout({ children }) {
   ];
 
   // O backend / localStorage salva a função do usuário no campo `funcao` (português).
+  // Antes aqui estava usando `user?.role` (inglês), o que fazia com que o filtro
   // retornasse uma lista vazia e a sidebar ficasse sem itens.
   const filteredMenuItems = menuItems.filter(item => 
     item.show.includes(user?.funcao)
