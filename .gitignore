@@ -6,6 +6,8 @@
 
 # Dependencies
 node_modules/
+frontend/node_modules/*
+
 /node_modules
 /.pnp
 .pnp.js
@@ -51,6 +53,8 @@ __pycache__/
 *pyc*
 venv/
 .venv/
+backend/venv/*
+backend/.env
 
 # Development tools
 chainlit.md
@@ -81,33 +85,5 @@ android-sdk/ -e
 # Environment files
 *.env
 *.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/0.pack
--e 
-# Environment files
-*.env
-*.env.*
+-e
 *.lock
