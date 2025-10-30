@@ -33,6 +33,34 @@ axios.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Interceptor de resposta global para normalizar payloads de erro de API
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    try {
+      const apiDetail = error?.response?.data?.detail;
+      let normalized = null;
+      if (typeof apiDetail === 'string') {
+        normalized = apiDetail;
+      } else if (Array.isArray(apiDetail)) {
+        normalized = apiDetail.map(d => d.msg || JSON.stringify(d)).join('; ');
+      } else if (apiDetail && typeof apiDetail === 'object') {
+        normalized = apiDetail.msg || JSON.stringify(apiDetail);
+      }
+      if (normalized) {
+        // Sobrescreva tanto `error.message` quanto `response.data.detail` para que os chamadores recebam uma string.
+        error.message = normalized;
+        if (error.response && error.response.data) {
+          error.response.data.detail = normalized;
+        }
+      }
+    } catch (e) {
+      // ignore normalization errors
+    }
+    return Promise.reject(error);
+  }
+);
+
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('token');
   return token ? children : <Navigate to="/login" />;

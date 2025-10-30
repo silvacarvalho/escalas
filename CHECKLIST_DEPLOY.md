@@ -41,18 +41,18 @@ Use este checklist para garantir que tudo está configurado corretamente.
 - [ ] Banco de dados criado
   ```sql
   psql -U postgres
-  CREATE DATABASE escalas_distritais;
+  CREATE DATABASE apostello;
   \q
   ```
 
 - [ ] Senha do PostgreSQL definida/conhecida
   ```sql
-  ALTER USER postgres WITH PASSWORD 'sua_senha';
+  ALTER USER postgres WITH PASSWORD 'postgres';
   ```
 
 - [ ] Conexão testada
   ```bash
-  psql -U postgres -d escalas_distritais -c "SELECT version();"
+  psql -U postgres -d apostello -c "SELECT version();"
   ```
 
 ---
@@ -61,7 +61,7 @@ Use este checklist para garantir que tudo está configurado corretamente.
 
 - [ ] Navegou para pasta backend
   ```bash
-  cd sistema-escalas/backend
+  cd escalas/backend
   ```
 
 - [ ] Ambiente virtual criado

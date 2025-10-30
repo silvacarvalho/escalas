@@ -53,12 +53,12 @@ export default function Evaluate() {
       }
 
       await axios.post(`${API}/evaluations`, {
-        schedule_item_id: scheduleItemId,
-        church_id: scheduleInfo.schedule.church_id,
-        member_type: 'preacher',
-        evaluated_user_id: scheduleInfo.item.preacher_id,
-        rating: rating,
-        feedback: feedback
+        id_item_escala: scheduleItemId,
+        id_igreja: scheduleInfo.schedule.id_igreja,
+        tipo_membro: 'pregador',
+        id_usuario_avaliado: scheduleInfo.item.id_pregador,
+        nota: rating,
+        comentario: feedback
       });
 
       toast.success('Avaliação enviada com sucesso!');

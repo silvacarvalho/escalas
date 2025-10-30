@@ -21,8 +21,8 @@ export default function Login() {
 
     try {
       const response = await axios.post(`${API}/auth/login`, {
-        username,
-        password,
+        nome_usuario: username,
+        senha: password,
       });
 
       const { access_token, user } = response.data;
@@ -32,7 +32,23 @@ export default function Login() {
       toast.success('Login realizado com sucesso!');
       navigate('/');
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Credenciais inválidas');
+      // Garantir que passamos uma string para o toast (React não aceita objetos como children)
+      console.error('Login error:', error);
+      const detail = error.response?.data?.detail;
+      let message = 'Credenciais inválidas';
+      if (typeof detail === 'string') {
+        message = detail;
+      } else if (Array.isArray(detail)) {
+        // pydantic/fastapi pode retornar uma lista de erros
+        message = detail
+          .map((d) => (typeof d === 'string' ? d : d?.msg || JSON.stringify(d)))
+          .join('; ');
+      } else if (detail && typeof detail === 'object') {
+        message = detail.msg || JSON.stringify(detail);
+      } else if (error.message) {
+        message = error.message;
+      }
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -49,8 +65,8 @@ export default function Login() {
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent'
-          }}>Sistema de Escalas</CardTitle>
-          <CardDescription className="text-base">Gerenciamento Distrital</CardDescription>
+          }}>APOSTELLO</CardTitle>
+          <CardDescription className="text-base">Controle de Escalas: Pregação e Louvor Especial</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">

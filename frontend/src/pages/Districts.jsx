@@ -32,8 +32,8 @@ export default function Districts() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDistrict, setEditingDistrict] = useState(null);
   const [formData, setFormData] = useState({
-    name: '',
-    pastor_id: ''
+    nome: '',
+    id_pastor: ''
   });
 
   useEffect(() => {
@@ -79,8 +79,8 @@ export default function Districts() {
   const handleEdit = (district) => {
     setEditingDistrict(district);
     setFormData({
-      name: district.name,
-      pastor_id: district.pastor_id
+      nome: district.nome,
+      id_pastor: district.id_pastor
     });
     setDialogOpen(true);
   };
@@ -99,16 +99,16 @@ export default function Districts() {
   const resetForm = () => {
     setEditingDistrict(null);
     setFormData({
-      name: '',
-      pastor_id: ''
+      nome: '',
+      id_pastor: ''
     });
   };
 
   const getDistrictStats = (districtId) => {
-    const districtChurches = churches.filter(c => c.district_id === districtId);
-    const districtUsers = users.filter(u => u.district_id === districtId);
-    const preachers = districtUsers.filter(u => u.is_preacher);
-    const singers = districtUsers.filter(u => u.is_singer);
+  const districtChurches = churches.filter(c => c.id_distrito === districtId);
+  const districtUsers = users.filter(u => u.id_distrito === districtId);
+  const preachers = districtUsers.filter(u => u.eh_pregador);
+  const singers = districtUsers.filter(u => u.eh_cantor);
     
     return {
       churches: districtChurches.length,
@@ -118,7 +118,7 @@ export default function Districts() {
     };
   };
 
-  const pastors = users.filter(u => u.role === 'pastor_distrital');
+  const pastors = users.filter(u => u.funcao === 'pastor_distrital');
 
   if (loading) {
     return (
@@ -156,20 +156,20 @@ export default function Districts() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nome do Distrito *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    <Input
+                    id="nome"
+                    value={formData.nome}
+                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                     placeholder="Ex: Distrito Norte"
                     required
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="pastor_id">Pastor Responsável *</Label>
+                  <Label htmlFor="id_pastor">Pastor Responsável *</Label>
                   <Select
-                    value={formData.pastor_id}
-                    onValueChange={(value) => setFormData({ ...formData, pastor_id: value })}
+                    value={formData.id_pastor}
+                    onValueChange={(value) => setFormData({ ...formData, id_pastor: value })}
                     required
                   >
                     <SelectTrigger>
@@ -178,7 +178,7 @@ export default function Districts() {
                     <SelectContent>
                       {pastors.map((pastor) => (
                         <SelectItem key={pastor.id} value={pastor.id}>
-                          {pastor.name}
+                          {pastor.nome_completo}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -200,7 +200,7 @@ export default function Districts() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {districts.map((district) => {
-            const pastor = users.find(u => u.id === district.pastor_id);
+            const pastor = users.find(u => u.id === district.id_pastor);
             const stats = getDistrictStats(district.id);
             
             return (
@@ -210,11 +210,11 @@ export default function Districts() {
                     <div className="flex-1">
                       <CardTitle className="flex items-center space-x-2 mb-2">
                         <MapPin className="h-5 w-5 text-purple-600" />
-                        <span>{district.name}</span>
+                        <span>{district.nome}</span>
                       </CardTitle>
                       {pastor && (
                         <p className="text-sm text-gray-600">
-                          <span className="font-semibold">Pastor:</span> {pastor.name}
+                          <span className="font-semibold">Pastor:</span> {pastor.nome_completo}
                         </p>
                       )}
                     </div>

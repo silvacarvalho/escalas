@@ -32,13 +32,13 @@ export default function Churches() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingChurch, setEditingChurch] = useState(null);
   const [formData, setFormData] = useState({
-    name: '',
-    district_id: '',
-    address: '',
+    nome: '',
+    id_distrito: '',
+    endereco: '',
     latitude: '',
     longitude: '',
-    leader_id: '',
-    service_schedule: []
+    id_lider: '',
+    horarios_culto: []
   });
   const [serviceDays, setServiceDays] = useState([{ day_of_week: 'saturday', time: '09:00' }]);
 
@@ -51,7 +51,7 @@ export default function Churches() {
       const [churchesRes, districtsRes, usersRes] = await Promise.all([
         axios.get(`${API}/churches`),
         axios.get(`${API}/districts`),
-        axios.get(`${API}/users?is_preacher=true`)
+        axios.get(`${API}/users?eh_pregador=true`)
       ]);
       setChurches(churchesRes.data);
       setDistricts(districtsRes.data);
@@ -70,7 +70,11 @@ export default function Churches() {
         ...formData,
         latitude: formData.latitude ? parseFloat(formData.latitude) : null,
         longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-        service_schedule: serviceDays
+        horarios_culto: serviceDays,
+        nome: formData.nome,
+        id_distrito: formData.id_distrito,
+        endereco: formData.endereco,
+        id_lider: formData.id_lider
       };
 
       if (editingChurch) {
@@ -92,14 +96,14 @@ export default function Churches() {
   const handleEdit = (church) => {
     setEditingChurch(church);
     setFormData({
-      name: church.name,
-      district_id: church.district_id,
-      address: church.address || '',
+      nome: church.nome,
+      id_distrito: church.id_distrito,
+      endereco: church.endereco || '',
       latitude: church.latitude || '',
       longitude: church.longitude || '',
-      leader_id: church.leader_id || ''
+      id_lider: church.id_lider || ''
     });
-    setServiceDays(church.service_schedule?.length > 0 ? church.service_schedule : [{ day_of_week: 'saturday', time: '09:00' }]);
+    setServiceDays(church.horarios_culto?.length > 0 ? church.horarios_culto : [{ day_of_week: 'saturday', time: '09:00' }]);
     setDialogOpen(true);
   };
 
@@ -117,13 +121,13 @@ export default function Churches() {
   const resetForm = () => {
     setEditingChurch(null);
     setFormData({
-      name: '',
-      district_id: '',
-      address: '',
+      nome: '',
+      id_distrito: '',
+      endereco: '',
       latitude: '',
       longitude: '',
-      leader_id: '',
-      service_schedule: []
+      id_lider: '',
+      horarios_culto: []
     });
     setServiceDays([{ day_of_week: 'saturday', time: '09:00' }]);
   };
@@ -143,13 +147,13 @@ export default function Churches() {
   };
 
   const dayOptions = [
+    { value: 'sunday', label: 'Domingo' },
     { value: 'monday', label: 'Segunda-feira' },
     { value: 'tuesday', label: 'Terça-feira' },
     { value: 'wednesday', label: 'Quarta-feira' },
     { value: 'thursday', label: 'Quinta-feira' },
     { value: 'friday', label: 'Sexta-feira' },
-    { value: 'saturday', label: 'Sábado' },
-    { value: 'sunday', label: 'Domingo' }
+    { value: 'saturday', label: 'Sábado' }
   ];
 
   if (loading) {
@@ -187,19 +191,19 @@ export default function Churches() {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Nome *</Label>
+                    <Label htmlFor="nome">Nome *</Label>
                   <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    id="nome"
+                    value={formData.nome}
+                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="district_id">Distrito *</Label>
+                    <Label htmlFor="id_distrito">Distrito *</Label>
                   <Select
-                    value={formData.district_id}
-                    onValueChange={(value) => setFormData({ ...formData, district_id: value })}
+                    value={formData.id_distrito}
+                    onValueChange={(value) => setFormData({ ...formData, id_distrito: value })}
                     required
                   >
                     <SelectTrigger>
@@ -208,18 +212,18 @@ export default function Churches() {
                     <SelectContent>
                       {districts.map((district) => (
                         <SelectItem key={district.id} value={district.id}>
-                          {district.name}
+                          {district.nome}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="address">Endereço</Label>
+                  <Label htmlFor="endereco">Endereço</Label>
                   <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    id="endereco"
+                    value={formData.endereco}
+                    onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -245,10 +249,10 @@ export default function Churches() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="leader_id">Líder da Igreja</Label>
+                    <Label htmlFor="id_lider">Líder da Igreja</Label>
                   <Select
-                    value={formData.leader_id}
-                    onValueChange={(value) => setFormData({ ...formData, leader_id: value })}
+                    value={formData.id_lider}
+                    onValueChange={(value) => setFormData({ ...formData, id_lider: value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o líder" />
@@ -256,7 +260,7 @@ export default function Churches() {
                     <SelectContent>
                       {users.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
-                          {user.name}
+                          {user.nome_completo}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -322,8 +326,8 @@ export default function Churches() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {churches.map((church) => {
-            const district = districts.find(d => d.id === church.district_id);
-            const leader = users.find(u => u.id === church.leader_id);
+            const district = districts.find(d => d.id === church.id_distrito);
+            const leader = users.find(u => u.id === church.id_lider);
             
             return (
               <Card key={church.id} className="hover:shadow-lg transition-all" data-testid={`church-card-${church.id}`}>
@@ -332,28 +336,28 @@ export default function Churches() {
                     <div className="flex-1">
                       <CardTitle className="flex items-center space-x-2 mb-2">
                         <ChurchIcon className="h-5 w-5 text-purple-600" />
-                        <span>{church.name}</span>
+                        <span>{church.nome}</span>
                       </CardTitle>
-                      <p className="text-sm text-gray-500">{district?.name || 'Distrito não encontrado'}</p>
+                      <p className="text-sm text-gray-500">{district?.nome || 'Distrito não encontrado'}</p>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 text-sm">
-                    {church.address && (
+                    {church.endereco && (
                       <p className="text-gray-600">
-                        <span className="font-semibold">Endereço:</span> {church.address}
+                        <span className="font-semibold">Endereço:</span> {church.endereco}
                       </p>
                     )}
                     {leader && (
                       <p className="text-gray-600">
-                        <span className="font-semibold">Líder:</span> {leader.name}
+                          <span className="font-semibold">Líder:</span> {leader.nome_completo}
                       </p>
                     )}
-                    {church.service_schedule?.length > 0 && (
+                    {church.horarios_culto?.length > 0 && (
                       <div>
                         <p className="font-semibold text-gray-700 mb-1">Cultos:</p>
-                        {church.service_schedule.map((schedule, idx) => (
+                        {church.horarios_culto.map((schedule, idx) => (
                           <p key={idx} className="text-gray-600 ml-2">
                             {dayOptions.find(d => d.value === schedule.day_of_week)?.label} - {schedule.time}
                           </p>

@@ -24,7 +24,7 @@ python scripts/test_connection.py
 ✅ Conexão estabelecida com sucesso!
 📦 Versão do PostgreSQL: ...
 ✅ Sessão criada com sucesso!
-🗄️  Banco de dados: escalas_distritais
+🗄️  Banco de dados: apostello
 ```
 
 ### 2️⃣ Criar Banco de Dados (se necessário)

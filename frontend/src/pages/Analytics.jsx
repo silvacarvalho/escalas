@@ -16,8 +16,8 @@ export default function Analytics() {
     const storedUser = JSON.parse(localStorage.getItem('user'));
     setUser(storedUser);
     
-    if (storedUser?.role === 'pastor_distrital' && storedUser?.district_id) {
-      loadAnalytics(storedUser.district_id);
+    if (storedUser?.funcao === 'pastor_distrital' && storedUser?.id_distrito) {
+      loadAnalytics(storedUser.id_distrito);
     } else {
       setLoading(false);
     }
@@ -25,7 +25,7 @@ export default function Analytics() {
 
   const loadAnalytics = async (districtId) => {
     try {
-      const response = await axios.get(`${API}/analytics/dashboard?district_id=${districtId}`);
+    const response = await axios.get(`${API}/analytics/dashboard?id_distrito=${districtId}`);
       setAnalytics(response.data);
     } catch (error) {
       toast.error('Erro ao carregar analytics');
@@ -56,7 +56,7 @@ export default function Analytics() {
     );
   }
 
-  if (!analytics || user?.role !== 'pastor_distrital') {
+  if (!analytics || user?.funcao !== 'pastor_distrital') {
     return (
       <Layout>
         <div className="space-y-6">
@@ -87,7 +87,7 @@ export default function Analytics() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Total de Igrejas</p>
-                  <p className="text-4xl font-bold text-purple-600">{analytics.total_churches}</p>
+                  <p className="text-4xl font-bold text-purple-600">{analytics.total_igrejas}</p>
                 </div>
                 <ChurchIcon className="h-12 w-12 text-purple-400" />
               </div>
@@ -99,7 +99,7 @@ export default function Analytics() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Pregadores Ativos</p>
-                  <p className="text-4xl font-bold text-green-600">{analytics.total_preachers}</p>
+                  <p className="text-4xl font-bold text-green-600">{analytics.total_pregadores}</p>
                 </div>
                 <Users className="h-12 w-12 text-green-400" />
               </div>
@@ -111,7 +111,7 @@ export default function Analytics() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Cantores Ativos</p>
-                  <p className="text-4xl font-bold text-orange-600">{analytics.total_singers}</p>
+                  <p className="text-4xl font-bold text-orange-600">{analytics.total_cantores}</p>
                 </div>
                 <Users className="h-12 w-12 text-orange-400" />
               </div>
@@ -131,10 +131,10 @@ export default function Analytics() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {analytics.top_preachers && analytics.top_preachers.length > 0 ? (
-                  analytics.top_preachers.slice(0, 10).map((preacher, index) => (
+                {analytics.top_pregadores && analytics.top_pregadores.length > 0 ? (
+                  analytics.top_pregadores.slice(0, 10).map((pregador, index) => (
                     <div
-                      key={preacher.id}
+                      key={pregador.id}
                       className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all"
                     >
                       <div className="flex items-center space-x-3">
@@ -147,14 +147,14 @@ export default function Analytics() {
                           {index + 1}
                         </div>
                         <div>
-                          <p className="font-semibold text-sm">{preacher.name}</p>
-                          <p className="text-xs text-gray-500">@{preacher.username}</p>
+                          <p className="font-semibold text-sm">{pregador.nome_completo}</p>
+                          <p className="text-xs text-gray-500">@{pregador.nome_usuario}</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Star className={`h-4 w-4 ${getScoreColor(preacher.preacher_score)}`} />
-                        <Badge className={getScoreBadgeColor(preacher.preacher_score)}>
-                          {preacher.preacher_score.toFixed(1)}
+                        <Star className={`h-4 w-4 ${getScoreColor(pregador.pontuacao_pregacao)}`} />
+                        <Badge className={getScoreBadgeColor(pregador.pontuacao_pregacao)}>
+                          {pregador.pontuacao_pregacao.toFixed(1)}
                         </Badge>
                       </div>
                     </div>
@@ -182,7 +182,7 @@ export default function Analytics() {
                       <Star
                         key={i}
                         className={`h-3 w-3 inline ${
-                          i < evaluation.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
+                          i < (evaluation.nota || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
                         }`}
                       />
                     ));
@@ -194,14 +194,14 @@ export default function Analytics() {
                       >
                         <div className="flex items-start justify-between mb-2">
                           <p className="text-sm font-semibold text-gray-700">
-                            {evaluation.member_type === 'preacher' ? 'Pregação' : 'Louvor Especial'}
+                            {evaluation.tipo_membro === 'pregador' ? 'Pregação' : 'Louvor Especial'}
                           </p>
                           <div className="flex items-center space-x-1">
                             {ratingStars}
                           </div>
                         </div>
-                        {evaluation.feedback && (
-                          <p className="text-xs text-gray-600 italic">"{evaluation.feedback}"</p>
+                        {evaluation.comentario && (
+                          <p className="text-xs text-gray-600 italic">"{evaluation.comentario}"</p>
                         )}
                       </div>
                     );
@@ -231,7 +231,7 @@ export default function Analytics() {
                 </div>
                 <p className="text-2xl font-bold text-blue-600">
                   {analytics.top_preachers && analytics.top_preachers.length > 0
-                    ? (analytics.top_preachers.reduce((acc, p) => acc + p.preacher_score, 0) / analytics.top_preachers.length).toFixed(1)
+                    ? (analytics.top_preachers.reduce((acc, p) => acc + p.pontuacao_pregacao, 0) / analytics.top_preachers.length).toFixed(1)
                     : '0.0'
                   }
                 </p>
@@ -244,7 +244,7 @@ export default function Analytics() {
                   <p className="text-xs font-semibold text-gray-700">Alto Desempenho</p>
                 </div>
                 <p className="text-2xl font-bold text-green-600">
-                  {analytics.top_preachers ? analytics.top_preachers.filter(p => p.preacher_score >= 80).length : 0}
+                  {analytics.top_preachers ? analytics.top_preachers.filter(p => p.pontuacao_pregacao >= 80).length : 0}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">Pregadores com score ≥ 80</p>
               </div>
@@ -255,7 +255,7 @@ export default function Analytics() {
                   <p className="text-xs font-semibold text-gray-700">Médio Desempenho</p>
                 </div>
                 <p className="text-2xl font-bold text-yellow-600">
-                  {analytics.top_preachers ? analytics.top_preachers.filter(p => p.preacher_score >= 60 && p.preacher_score < 80).length : 0}
+                  {analytics.top_preachers ? analytics.top_preachers.filter(p => p.pontuacao_pregacao >= 60 && p.pontuacao_pregacao < 80).length : 0}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">Pregadores com score 60-79</p>
               </div>
@@ -266,7 +266,7 @@ export default function Analytics() {
                   <p className="text-xs font-semibold text-gray-700">Necessita Atenção</p>
                 </div>
                 <p className="text-2xl font-bold text-red-600">
-                  {analytics.top_preachers ? analytics.top_preachers.filter(p => p.preacher_score < 60).length : 0}
+                  {analytics.top_preachers ? analytics.top_preachers.filter(p => p.pontuacao_pregacao < 60).length : 0}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">Pregadores com score {'<'} 60</p>
               </div>

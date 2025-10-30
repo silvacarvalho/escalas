@@ -30,20 +30,21 @@ export default function Users() {
   const [users, setUsers] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [churches, setChurches] = useState([]);
+  const [evaluations, setEvaluations] = useState({});
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState({
-    username: '',
-    password: '',
-    name: '',
+    nome_usuario: '',
+    senha: '',
+    nome: '',
     email: '',
-    phone: '',
-    role: 'pregador',
-    district_id: '',
-    church_id: '',
-    is_preacher: false,
-    is_singer: false
+    telefone: '',
+    funcao: 'pregador',
+    id_distrito: '',
+    id_igreja: '',
+    eh_pregador: false,
+    eh_cantor: false
   });
 
   useEffect(() => {
@@ -57,9 +58,27 @@ export default function Users() {
         axios.get(`${API}/districts`),
         axios.get(`${API}/churches`)
       ]);
-      setUsers(usersRes.data);
+      
+      // Carregar avaliações para cada usuário
+      const usersData = usersRes.data;
+      const evaluationsData = {};
+      
+      await Promise.all(
+        usersData.map(async (user) => {
+          try {
+            const evalRes = await axios.get(`${API}/evaluations/by-user/${user.id}`);
+            evaluationsData[user.id] = evalRes.data;
+          } catch (error) {
+            console.error(`Erro ao carregar avaliações para usuário ${user.id}:`, error);
+            evaluationsData[user.id] = [];
+          }
+        })
+      );
+
+      setUsers(usersData);
       setDistricts(districtsRes.data);
       setChurches(churchesRes.data);
+      setEvaluations(evaluationsData);
     } catch (error) {
       toast.error('Erro ao carregar dados');
     } finally {
@@ -72,8 +91,8 @@ export default function Users() {
     try {
       if (editingUser) {
         const updateData = { ...formData };
-        delete updateData.password; // Don't send password on update
-        delete updateData.username; // Don't send username on update
+        delete updateData.senha; // Don't send password on update
+        delete updateData.nome_usuario; // Don't send username on update
         
         await axios.put(`${API}/users/${editingUser.id}`, updateData);
         toast.success('Usuário atualizado com sucesso!');
@@ -93,16 +112,16 @@ export default function Users() {
   const handleEdit = (user) => {
     setEditingUser(user);
     setFormData({
-      username: user.username,
+      nome_usuario: user.nome_usuario,
       password: '',
-      name: user.name,
+      nome_completo: user.nome_completo,
       email: user.email || '',
-      phone: user.phone || '',
-      role: user.role,
-      district_id: user.district_id || '',
-      church_id: user.church_id || '',
-      is_preacher: user.is_preacher,
-      is_singer: user.is_singer
+      telefone: user.telefone || '',
+      funcao: user.funcao,
+      id_distrito: user.id_distrito || '',
+      id_igreja: user.id_igreja || '',
+      eh_pregador: user.eh_pregador,
+      eh_cantor: user.eh_cantor
     });
     setDialogOpen(true);
   };
@@ -121,16 +140,16 @@ export default function Users() {
   const resetForm = () => {
     setEditingUser(null);
     setFormData({
-      username: '',
-      password: '',
-      name: '',
+      nome_usuario: '',
+      senha: '',
+      nome_completo: '',
       email: '',
-      phone: '',
-      role: 'pregador',
-      district_id: '',
-      church_id: '',
-      is_preacher: false,
-      is_singer: false
+      telefone: '',
+      funcao: 'pregador',
+      id_distrito: '',
+      id_igreja: '',
+      eh_pregador: false,
+      eh_cantor: false
     });
   };
 
@@ -198,20 +217,20 @@ export default function Users() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Nome Completo *</Label>
+                    <Label htmlFor="nome_completo">Nome Completo *</Label>
                     <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      id="nome_completo"
+                      value={formData.nome_completo}
+                      onChange={(e) => setFormData({ ...formData, nome_completo: e.target.value })}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="username">Usuário *</Label>
+                    <Label htmlFor="nome_usuario">Usuário *</Label>
                     <Input
-                      id="username"
-                      value={formData.username}
-                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      id="nome_usuario"
+                      value={formData.nome_usuario}
+                      onChange={(e) => setFormData({ ...formData, nome_usuario: e.target.value })}
                       required
                       disabled={editingUser}
                     />
@@ -220,12 +239,12 @@ export default function Users() {
 
                 {!editingUser && (
                   <div className="space-y-2">
-                    <Label htmlFor="password">Senha *</Label>
+                    <Label htmlFor="senha">Senha *</Label>
                     <Input
-                      id="password"
+                      id="senha"
                       type="password"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      value={formData.senha}
+                      onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
                       required={!editingUser}
                     />
                   </div>
@@ -242,21 +261,21 @@ export default function Users() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Telefone</Label>
+                    <Label htmlFor="telefone">Telefone</Label>
                     <Input
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      id="telefone"
+                      value={formData.telefone}
+                      onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
                       placeholder="+55 11 99999-9999"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="role">Função *</Label>
+                  <Label htmlFor="funcao">Função *</Label>
                   <Select
-                    value={formData.role}
-                    onValueChange={(value) => setFormData({ ...formData, role: value })}
+                    value={formData.funcao}
+                    onValueChange={(value) => setFormData({ ...formData, funcao: value })}
                     required
                   >
                     <SelectTrigger>
@@ -274,10 +293,10 @@ export default function Users() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="district_id">Distrito</Label>
+                    <Label htmlFor="id_distrito">Distrito</Label>
                     <Select
-                      value={formData.district_id}
-                      onValueChange={(value) => setFormData({ ...formData, district_id: value })}
+                      value={formData.id_distrito}
+                      onValueChange={(value) => setFormData({ ...formData, id_distrito: value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o distrito" />
@@ -285,27 +304,27 @@ export default function Users() {
                       <SelectContent>
                         {districts.map((district) => (
                           <SelectItem key={district.id} value={district.id}>
-                            {district.name}
+                            {district.nome}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="church_id">Igreja</Label>
+                    <Label htmlFor="id_igreja">Igreja</Label>
                     <Select
-                      value={formData.church_id}
-                      onValueChange={(value) => setFormData({ ...formData, church_id: value })}
+                      value={formData.id_igreja}
+                      onValueChange={(value) => setFormData({ ...formData, id_igreja: value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione a igreja" />
                       </SelectTrigger>
                       <SelectContent>
                         {churches
-                          .filter(c => !formData.district_id || c.district_id === formData.district_id)
+                          .filter(c => !formData.id_distrito || c.id_distrito === formData.id_distrito)
                           .map((church) => (
                             <SelectItem key={church.id} value={church.id}>
-                              {church.name}
+                              {church.nome}
                             </SelectItem>
                           ))}
                       </SelectContent>
@@ -318,19 +337,19 @@ export default function Users() {
                   <div className="flex items-center space-x-6">
                     <div className="flex items-center space-x-2">
                       <Checkbox
-                        id="is_preacher"
-                        checked={formData.is_preacher}
-                        onCheckedChange={(checked) => setFormData({ ...formData, is_preacher: checked })}
+                        id="eh_pregador"
+                        checked={formData.eh_pregador}
+                        onCheckedChange={(checked) => setFormData({ ...formData, eh_pregador: checked })}
                       />
-                      <Label htmlFor="is_preacher" className="cursor-pointer">É Pregador</Label>
+                      <Label htmlFor="eh_pregador" className="cursor-pointer">É Pregador</Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Checkbox
-                        id="is_singer"
-                        checked={formData.is_singer}
-                        onCheckedChange={(checked) => setFormData({ ...formData, is_singer: checked })}
+                        id="eh_cantor"
+                        checked={formData.eh_cantor}
+                        onCheckedChange={(checked) => setFormData({ ...formData, eh_cantor: checked })}
                       />
-                      <Label htmlFor="is_singer" className="cursor-pointer">É Cantor</Label>
+                      <Label htmlFor="eh_cantor" className="cursor-pointer">É Cantor</Label>
                     </div>
                   </div>
                 </div>
@@ -350,9 +369,9 @@ export default function Users() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {users.map((user) => {
-            const district = districts.find(d => d.id === user.district_id);
-            const church = churches.find(c => c.id === user.church_id);
-            
+            const district = districts.find(d => d.id === user.id_distrito);
+            const church = churches.find(c => c.id === user.id_igreja);
+
             return (
               <Card key={user.id} className="hover:shadow-lg transition-all" data-testid={`user-card-${user.id}`}>
                 <CardHeader>
@@ -360,16 +379,16 @@ export default function Users() {
                     <div className="flex-1">
                       <CardTitle className="flex items-center space-x-2 mb-2">
                         <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white font-bold">
-                          {user.name.charAt(0).toUpperCase()}
+                          {user.nome_completo.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-base">{user.name}</p>
-                          <p className="text-xs text-gray-500 font-normal">@{user.username}</p>
+                          <p className="text-base">{user.nome_completo}</p>
+                          <p className="text-xs text-gray-500 font-normal">@{user.nome_usuario}</p>
                         </div>
                       </CardTitle>
                     </div>
-                    <Badge className={getRoleBadgeColor(user.role)}>
-                      {getRoleLabel(user.role)}
+                    <Badge className={getRoleBadgeColor(user.funcao)}>
+                      {getRoleLabel(user.funcao)}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -380,39 +399,39 @@ export default function Users() {
                         <span className="font-semibold">Email:</span> {user.email}
                       </p>
                     )}
-                    {user.phone && (
+                    {user.telefone && (
                       <p className="text-gray-600">
-                        <span className="font-semibold">Telefone:</span> {user.phone}
+                        <span className="font-semibold">Telefone:</span> {user.telefone}
                       </p>
                     )}
                     {district && (
                       <p className="text-gray-600">
-                        <span className="font-semibold">Distrito:</span> {district.name}
+                        <span className="font-semibold">Distrito:</span> {district.nome}
                       </p>
                     )}
                     {church && (
                       <p className="text-gray-600">
-                        <span className="font-semibold">Igreja:</span> {church.name}
+                        <span className="font-semibold">Igreja:</span> {church.nome}
                       </p>
                     )}
                     
                     <div className="flex gap-2 pt-2">
-                      {user.is_preacher && (
+                      {user.eh_pregador && (
                         <Badge variant="outline" className="text-xs">
                           Pregador
-                          <Star className={`ml-1 h-3 w-3 ${getScoreColor(user.preacher_score)}`} />
-                          <span className={`ml-1 ${getScoreColor(user.preacher_score)}`}>
-                            {user.preacher_score.toFixed(0)}
+                          <Star className={`ml-1 h-3 w-3 ${getScoreColor(user.pontuacao_pregacao || 0)}`} />
+                          <span className={`ml-1 ${getScoreColor(user.pontuacao_pregacao || 0)}`}>
+                            {(user.pontuacao_pregacao || 0).toFixed(0)}
                           </span>
                         </Badge>
                       )}
-                      {user.is_singer && (
+                      {user.eh_cantor && (
                         <Badge variant="outline" className="text-xs">
                           Cantor
-                          <Star className={`ml-1 h-3 w-3 ${getScoreColor(user.singer_score)}`} />
-                          <span className={`ml-1 ${getScoreColor(user.singer_score)}`}>
-                            {user.singer_score.toFixed(0)}
-                          </span>
+                            <Star className={`ml-1 h-3 w-3 ${getScoreColor(user.pontuacao_canto || 0)}`} />
+                            <span className={`ml-1 ${getScoreColor(user.pontuacao_canto || 0)}`}>
+                              {(user.pontuacao_canto || 0).toFixed(0)}
+                            </span>
                         </Badge>
                       )}
                     </div>

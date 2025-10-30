@@ -28,9 +28,9 @@ export default function Profile() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [unavailableDialogOpen, setUnavailableDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
+    nome_completo: '',
     email: '',
-    phone: ''
+    telefone: ''
   });
   const [unavailablePeriod, setUnavailablePeriod] = useState({
     start_date: '',
@@ -47,9 +47,9 @@ export default function Profile() {
       const response = await axios.get(`${API}/auth/me`);
       setUser(response.data);
       setFormData({
-        name: response.data.name,
+        nome_completo: response.data.nome_completo,
         email: response.data.email || '',
-        phone: response.data.phone || ''
+        telefone: response.data.telefone || ''
       });
       
       // Update localStorage
@@ -77,11 +77,11 @@ export default function Profile() {
     e.preventDefault();
     try {
       const updatedPeriods = [
-        ...(user.unavailable_periods || []),
+        ...(user.periodos_indisponibilidade || []),
         unavailablePeriod
       ];
       
-      await axios.put(`${API}/auth/me`, { unavailable_periods: updatedPeriods });
+      await axios.put(`${API}/auth/me`, { periodos_indisponibilidade: updatedPeriods });
       toast.success('Período de indisponibilidade adicionado!');
       setUnavailableDialogOpen(false);
       setUnavailablePeriod({ start_date: '', end_date: '', reason: '' });
@@ -93,8 +93,8 @@ export default function Profile() {
 
   const handleRemoveUnavailability = async (index) => {
     try {
-      const updatedPeriods = user.unavailable_periods.filter((_, i) => i !== index);
-      await axios.put(`${API}/auth/me`, { unavailable_periods: updatedPeriods });
+  const updatedPeriods = user.periodos_indisponibilidade.filter((_, i) => i !== index);
+  await axios.put(`${API}/auth/me`, { periodos_indisponibilidade: updatedPeriods });
       toast.success('Período removido com sucesso!');
       loadProfile();
     } catch (error) {
@@ -150,12 +150,12 @@ export default function Profile() {
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-4">
                 <div className="h-20 w-20 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white text-3xl font-bold">
-                  {user.name.charAt(0).toUpperCase()}
+                  {user.nome_completo.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <CardTitle className="text-2xl mb-1">{user.name}</CardTitle>
+                  <CardTitle className="text-2xl mb-1">{user.nome_completo}</CardTitle>
                   <Badge className="bg-purple-100 text-purple-800">
-                    {getRoleLabel(user.role)}
+                    {getRoleLabel(user.funcao)}
                   </Badge>
                 </div>
               </div>
@@ -173,11 +173,11 @@ export default function Profile() {
                   </DialogHeader>
                   <form onSubmit={handleUpdate} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Nome Completo</Label>
+                      <Label htmlFor="nome_completo">Nome Completo</Label>
                       <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        id="nome_completo"
+                        value={formData.nome_completo}
+                        onChange={(e) => setFormData({ ...formData, nome_completo: e.target.value })}
                         required
                       />
                     </div>
@@ -191,11 +191,11 @@ export default function Profile() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Telefone</Label>
+                      <Label htmlFor="telefone">Telefone</Label>
                       <Input
-                        id="phone"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        id="telefone"
+                        value={formData.telefone}
+                        onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
                       />
                     </div>
                     <div className="flex justify-end space-x-2">
@@ -213,9 +213,9 @@ export default function Profile() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+                <div>
                 <p className="text-sm text-gray-500">Usuário</p>
-                <p className="font-semibold">@{user.username}</p>
+                <p className="font-semibold">@{user.nome_usuario}</p>
               </div>
               {user.email && (
                 <div>
@@ -223,10 +223,10 @@ export default function Profile() {
                   <p className="font-semibold">{user.email}</p>
                 </div>
               )}
-              {user.phone && (
+              {user.telefone && (
                 <div>
                   <p className="text-sm text-gray-500">Telefone</p>
-                  <p className="font-semibold">{user.phone}</p>
+                  <p className="font-semibold">{user.telefone}</p>
                 </div>
               )}
             </div>
@@ -234,7 +234,7 @@ export default function Profile() {
         </Card>
 
         {/* Scores Card (for preachers/singers) */}
-        {(user.is_preacher || user.is_singer) && (
+        {(user.eh_pregador || user.eh_cantor) && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -244,26 +244,26 @@ export default function Profile() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {user.is_preacher && (
+                {user.eh_pregador && (
                   <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-6 border border-green-200">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-sm font-semibold text-gray-700">Pregação</p>
                       <Star className="h-5 w-5 text-green-600" />
                     </div>
-                    <p className={`text-4xl font-bold ${getScoreColor(user.preacher_score)}`}>
-                      {user.preacher_score.toFixed(1)}
+                    <p className={`text-4xl font-bold ${getScoreColor(user.pontuacao_pregacao)}`}>
+                      {user.pontuacao_pregacao.toFixed(1)}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">de 100</p>
                   </div>
                 )}
-                {user.is_singer && (
+                {user.eh_cantor && (
                   <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg p-6 border border-orange-200">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-sm font-semibold text-gray-700">Louvor Especial</p>
                       <Star className="h-5 w-5 text-orange-600" />
                     </div>
-                    <p className={`text-4xl font-bold ${getScoreColor(user.singer_score)}`}>
-                      {user.singer_score.toFixed(1)}
+                    <p className={`text-4xl font-bold ${getScoreColor(user.pontuacao_canto)}`}>
+                      {user.pontuacao_canto.toFixed(1)}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">de 100</p>
                   </div>
@@ -274,7 +274,7 @@ export default function Profile() {
         )}
 
         {/* Unavailable Periods Card */}
-        {(user.is_preacher || user.is_singer) && (
+  {(user.eh_pregador || user.eh_cantor) && (
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -339,9 +339,9 @@ export default function Profile() {
               </div>
             </CardHeader>
             <CardContent>
-              {user.unavailable_periods && user.unavailable_periods.length > 0 ? (
+              {user.periodos_indisponibilidade && user.periodos_indisponibilidade.length > 0 ? (
                 <div className="space-y-3">
-                  {user.unavailable_periods.map((period, index) => (
+                  {user.periodos_indisponibilidade.map((period, index) => (
                     <div
                       key={index}
                       className="flex items-start justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg"

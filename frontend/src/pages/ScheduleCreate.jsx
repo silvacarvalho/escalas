@@ -33,8 +33,8 @@ export default function ScheduleCreate() {
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user'));
     setUser(storedUser);
-    if (storedUser?.district_id) {
-      setDistrictId(storedUser.district_id);
+    if (storedUser?.id_distrito) {
+      setDistrictId(storedUser.id_distrito);
     }
     loadData();
   }, []);
@@ -62,12 +62,12 @@ export default function ScheduleCreate() {
     if (!districtId || churches.length === 0) return;
     
     try {
-      const schedulesRes = await axios.get(`${API}/schedules?month=${month}&year=${year}&district_id=${districtId}`);
-      const existingSchedules = schedulesRes.data;
-      const existingChurchIds = existingSchedules.map(s => s.church_id);
+  const schedulesRes = await axios.get(`${API}/schedules?mes=${month}&ano=${year}&id_distrito=${districtId}`);
+  const existingSchedules = schedulesRes.data;
+  const existingChurchIds = existingSchedules.map(s => s.id_igreja);
       
       const districtChurches = churches.filter(
-        c => c.district_id === districtId && !existingChurchIds.includes(c.id)
+        c => c.id_distrito === districtId && !existingChurchIds.includes(c.id)
       );
       
       setAvailableChurches(districtChurches);
@@ -86,13 +86,31 @@ export default function ScheduleCreate() {
     setLoading(true);
     try {
       const response = await axios.post(
-        `${API}/schedules/generate-auto?month=${month}&year=${year}&district_id=${districtId}`
+        `${API}/schedules/generate-auto?mes=${month}&ano=${year}&id_distrito=${districtId}`
       );
       
-      toast.success(`${response.data.schedules.length} escalas geradas com sucesso!`);
-      navigate('/schedules');
+      // A resposta tem o formato { message: string, escalas: string[] }
+      if (response.data.escalas?.length > 0) {
+        toast.success(response.data.message);
+        navigate('/schedules');
+      } else {
+        toast.error('Não foi possível gerar escalas. Verifique se há pregadores disponíveis.');
+      }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Erro ao gerar escalas');
+      // Pydantic/fastapi validation errors come back as an array under `detail` (objects with keys {type, loc, msg, input, url}).
+      // Ensure we convert that into a human-readable string before passing to the toast to avoid React trying to render objects.
+      const apiDetail = error?.response?.data?.detail;
+      let message = 'Erro ao gerar escalas';
+      if (typeof apiDetail === 'string') {
+        message = apiDetail;
+      } else if (Array.isArray(apiDetail)) {
+        message = apiDetail.map(d => d.msg || JSON.stringify(d)).join('; ');
+      } else if (apiDetail && typeof apiDetail === 'object') {
+        message = apiDetail.msg || JSON.stringify(apiDetail);
+      } else if (error?.message) {
+        message = error.message;
+      }
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -107,16 +125,27 @@ export default function ScheduleCreate() {
     setLoading(true);
     try {
       const response = await axios.post(`${API}/schedules/manual`, {
-        month,
-        year,
-        church_id: churchId,
-        generation_mode: 'manual'
+        mes: month,
+        ano: year,
+        id_igreja: churchId,
+        modo_geracao: 'manual'
       });
-      
+
       toast.success('Escala criada com sucesso!');
       navigate(`/schedules/${response.data.id}/calendar`);
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Erro ao criar escala');
+      const apiDetail = error?.response?.data?.detail;
+      let message = 'Erro ao criar escala';
+      if (typeof apiDetail === 'string') {
+        message = apiDetail;
+      } else if (Array.isArray(apiDetail)) {
+        message = apiDetail.map(d => d.msg || JSON.stringify(d)).join('; ');
+      } else if (apiDetail && typeof apiDetail === 'object') {
+        message = apiDetail.msg || JSON.stringify(apiDetail);
+      } else if (error?.message) {
+        message = error.message;
+      }
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -235,7 +264,7 @@ export default function ScheduleCreate() {
               </div>
             </div>
 
-            {user?.role === 'pastor_distrital' && (
+            {user?.funcao === 'pastor_distrital' && (
               <div className="space-y-2">
                 <Label htmlFor="district">Distrito</Label>
                 <Select
@@ -247,9 +276,9 @@ export default function ScheduleCreate() {
                     <SelectValue placeholder="Selecione o distrito" />
                   </SelectTrigger>
                   <SelectContent>
-                    {districts.map((district) => (
+                        {districts.map((district) => (
                       <SelectItem key={district.id} value={district.id}>
-                        {district.name}
+                        {district.nome}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -267,7 +296,7 @@ export default function ScheduleCreate() {
                   <SelectContent>
                     {availableChurches.map((church) => (
                       <SelectItem key={church.id} value={church.id}>
-                        {church.name}
+                        {church.nome}
                       </SelectItem>
                     ))}
                   </SelectContent>

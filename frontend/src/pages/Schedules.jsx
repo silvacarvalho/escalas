@@ -92,7 +92,7 @@ export default function Schedules() {
     );
   }
 
-  const canManage = user?.role === 'pastor_distrital' || user?.role === 'lider_igreja';
+  const canManage = user?.funcao === 'pastor_distrital' || user?.funcao === 'lider_igreja';
 
   return (
     <Layout>
@@ -113,8 +113,8 @@ export default function Schedules() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {schedules.map((schedule) => {
-            const church = churches.find(c => c.id === schedule.church_id);
-            const filledItems = schedule.items?.filter(item => item.preacher_id).length || 0;
+            const church = churches.find(c => c.id === schedule.id_igreja);
+            const filledItems = schedule.items?.filter(item => item.id_pregador).length || 0;
             const totalItems = schedule.items?.length || 0;
             const completionRate = totalItems > 0 ? Math.round((filledItems / totalItems) * 100) : 0;
 
@@ -125,9 +125,9 @@ export default function Schedules() {
                     <div className="flex-1">
                       <CardTitle className="flex items-center space-x-2 mb-2">
                         <CalendarIcon className="h-5 w-5 text-purple-600" />
-                        <span>{getMonthName(schedule.month)} {schedule.year}</span>
+                        <span>{getMonthName(schedule.mes)} de {schedule.ano}</span>
                       </CardTitle>
-                      <p className="text-sm text-gray-600 font-medium">{church?.name || 'Igreja não encontrada'}</p>
+                      <p className="text-sm text-gray-600 font-medium">{church?.nome || 'Igreja não encontrada'}</p>
                     </div>
                     <Badge className={getStatusColor(schedule.status)}>
                       {getStatusLabel(schedule.status)}

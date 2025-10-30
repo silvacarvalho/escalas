@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API } from '@/App';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -85,8 +86,10 @@ export default function Layout({ children }) {
     },
   ];
 
+  // O backend / localStorage salva a função do usuário no campo `funcao` (português).
+  // retornasse uma lista vazia e a sidebar ficasse sem itens.
   const filteredMenuItems = menuItems.filter(item => 
-    item.show.includes(user?.role)
+    item.show.includes(user?.funcao)
   );
 
   const SidebarContent = () => (
@@ -97,7 +100,7 @@ export default function Layout({ children }) {
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent'
-        }}>Sistema de Escalas</h2>
+        }}>Apostello</h2>
       </div>
       
       <ScrollArea className="flex-1 px-3 py-4">
@@ -131,10 +134,10 @@ export default function Layout({ children }) {
       <div className="p-4 border-t">
         <div className="flex items-center space-x-3 mb-3 p-3 bg-gray-50 rounded-lg">
           <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white font-bold">
-            {user?.name?.charAt(0).toUpperCase()}
+            {user?.nome_usuario?.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate">{user?.name}</p>
+            <p className="text-sm font-semibold truncate">{user?.nome_completo}</p>
             <p className="text-xs text-gray-500 truncate">{user?.email}</p>
           </div>
         </div>

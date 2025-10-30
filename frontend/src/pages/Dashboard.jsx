@@ -28,8 +28,8 @@ export default function Dashboard() {
       setNotifications(notifResponse.data.slice(0, 5));
 
       // Load stats if pastor
-      if (storedUser?.role === 'pastor_distrital' && storedUser?.district_id) {
-        const statsResponse = await axios.get(`${API}/analytics/dashboard?district_id=${storedUser.district_id}`);
+      if (storedUser?.funcao === 'pastor_distrital' && storedUser?.id_distrito) {
+        const statsResponse = await axios.get(`${API}/analytics/dashboard?id_distrito=${storedUser.id_distrito}`);
         setStats(statsResponse.data);
       }
     } catch (error) {
@@ -39,42 +39,42 @@ export default function Dashboard() {
     }
   };
 
-  const quickActions = [
+  const acoesRapidas = [
     {
-      title: 'Criar Escala',
-      description: 'Gerar nova escala mensal',
+      titulo: 'Criar Escala',
+      descricao: 'Gerar nova escala mensal',
       icon: Calendar,
       color: '#667eea',
       action: () => navigate('/schedules/create'),
       show: ['pastor_distrital', 'lider_igreja']
     },
     {
-      title: 'Ver Escalas',
-      description: 'Visualizar escalas existentes',
+      titulo: 'Ver Escalas',
+      descricao: 'Visualizar escalas existentes',
       icon: Activity,
       color: '#10b981',
       action: () => navigate('/schedules'),
       show: ['pastor_distrital', 'lider_igreja', 'pregador', 'cantor']
     },
     {
-      title: 'Gerenciar Igrejas',
-      description: 'Administrar igrejas do distrito',
+      titulo: 'Gerenciar Igrejas',
+      descricao: 'Administrar igrejas do distrito',
       icon: Church,
       color: '#f59e0b',
       action: () => navigate('/churches'),
       show: ['pastor_distrital', 'lider_igreja']
     },
     {
-      title: 'Gerenciar Usuários',
-      description: 'Adicionar ou editar membros',
+      titulo: 'Gerenciar Usuários',
+      descricao: 'Adicionar ou editar membros',
       icon: Users,
       color: '#ef4444',
       action: () => navigate('/users'),
       show: ['pastor_distrital', 'lider_igreja']
     },
     {
-      title: 'Analytics',
-      description: 'Ver métricas e relatórios',
+      titulo: 'Analytics',
+      descricao: 'Ver métricas e relatórios',
       icon: TrendingUp,
       color: '#8b5cf6',
       action: () => navigate('/analytics'),
@@ -98,17 +98,18 @@ export default function Dashboard() {
         {/* Welcome Header */}
         <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-8 text-white shadow-lg">
           <h1 className="text-3xl font-bold mb-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-            Bem-vindo, {user?.name}!
+            Bem-vindo, {user?.nome_completo}!
           </h1>
+
           <p className="text-purple-100 text-lg">
-            {user?.role === 'pastor_distrital' && 'Pastor Distrital'}
-            {user?.role === 'lider_igreja' && 'Líder de Igreja'}
-            {user?.role === 'pregador' && 'Pregador'}
-            {user?.role === 'cantor' && 'Cantor'}
+            {user?.funcao === 'pastor_distrital' && 'Pastor Distrital'}
+            {user?.funcao === 'lider_igreja' && 'Líder de Igreja'}
+            {user?.funcao === 'pregador' && 'Pregador'}
+            {user?.funcao === 'cantor' && 'Cantor'}
           </p>
         </div>
 
-        {/* Stats Cards - Only for Pastor */}
+        {/* Cartões de Estatísticas - Somente para Pastor */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card className="shadow-md hover:shadow-lg transition-all">
@@ -116,7 +117,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Total de Igrejas</p>
-                    <p className="text-3xl font-bold text-purple-600">{stats.total_churches}</p>
+                    <p className="text-3xl font-bold text-purple-600">{stats.total_igrejas}</p>
                   </div>
                   <Church className="h-12 w-12 text-purple-400" />
                 </div>
@@ -127,7 +128,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Pregadores Ativos</p>
-                    <p className="text-3xl font-bold text-green-600">{stats.total_preachers}</p>
+                    <p className="text-3xl font-bold text-green-600">{stats.total_pregadores}</p>
                   </div>
                   <Users className="h-12 w-12 text-green-400" />
                 </div>
@@ -138,7 +139,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Cantores Ativos</p>
-                    <p className="text-3xl font-bold text-blue-600">{stats.total_singers}</p>
+                    <p className="text-3xl font-bold text-blue-600">{stats.total_cantores}</p>
                   </div>
                   <Users className="h-12 w-12 text-blue-400" />
                 </div>
@@ -147,12 +148,12 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Quick Actions */}
+        {/* Ações Rápidas */}
         <div>
           <h2 className="text-2xl font-bold mb-4" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Ações Rápidas</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {quickActions
-              .filter(action => action.show.includes(user?.role))
+            {acoesRapidas
+              .filter(action => action.show.includes(user?.funcao))
               .map((action, index) => {
                 const Icon = action.icon;
                 return (
@@ -160,7 +161,7 @@ export default function Dashboard() {
                     key={index}
                     className="cursor-pointer hover:shadow-xl transition-all group"
                     onClick={action.action}
-                    data-testid={`action-${action.title.toLowerCase().replace(/ /g, '-')}`}
+                    data-testid={`action-${action.titulo.toLowerCase().replace(/ /g, '-')}`}
                   >
                     <CardContent className="p-6">
                       <div className="flex items-start space-x-4">
@@ -172,9 +173,9 @@ export default function Dashboard() {
                         </div>
                         <div className="flex-1">
                           <h3 className="font-semibold text-lg mb-1 group-hover:text-purple-600 transition-all">
-                            {action.title}
+                            {action.titulo}
                           </h3>
-                          <p className="text-sm text-gray-500">{action.description}</p>
+                          <p className="text-sm text-gray-500">{action.descricao}</p>
                         </div>
                       </div>
                     </CardContent>
@@ -184,7 +185,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Recent Notifications */}
+        {/* Notificações Recentes */}
         {notifications.length > 0 && (
           <Card className="shadow-md">
             <CardHeader>
@@ -205,7 +206,7 @@ export default function Dashboard() {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h4 className="font-semibold text-sm">{notif.title}</h4>
+                        <h4 className="font-semibold text-sm">{notif.titulo}</h4>
                         <p className="text-sm text-gray-600 mt-1">{notif.message}</p>
                       </div>
                       {notif.status === 'unread' && (

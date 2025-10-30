@@ -21,7 +21,7 @@ from models import Usuario, Distrito, Igreja, Escala, ItemEscala, Avaliacao, Not
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
+SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'postgres')
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 
@@ -194,7 +194,7 @@ def create_access_token(data: dict) -> str:
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)) -> Usuario:
+async def get_usuario_atual(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)) -> Usuario:
     try:
         token = credentials.credentials
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -238,7 +238,7 @@ def slot_ocupado(db: Session, id_usuario: str, data: str) -> bool:
     return False
 
 # AUTH ROUTES
-@api_router.post("/auth/register", response_model=UsuarioResponse)
+@api_router.post('/auth/register', response_model=UsuarioResponse)
 async def register(user_data: UsuarioCreate, db: Session = Depends(get_db)):
     existing = db.query(Usuario).filter(Usuario.nome_usuario == user_data.nome_usuario).first()
     if existing:
@@ -251,40 +251,41 @@ async def register(user_data: UsuarioCreate, db: Session = Depends(get_db)):
     db.refresh(user)
     return user
 
-@api_router.post("/auth/login")
+@api_router.post('/auth/login')
 async def login(credentials: UsuarioLogin, db: Session = Depends(get_db)):
     user = db.query(Usuario).filter(Usuario.nome_usuario == credentials.nome_usuario, Usuario.ativo == True).first()
+
     if not user or not verify_password(credentials.senha, user.senha_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_access_token({"sub": user.id})
     user_dict = {"id": user.id, "nome_usuario": user.nome_usuario, "nome_completo": user.nome_completo, "email": user.email, "telefone": user.telefone, "funcao": user.funcao, "id_distrito": user.id_distrito, "id_igreja": user.id_igreja, "eh_pregador": user.eh_pregador, "eh_cantor": user.eh_cantor, "pontuacao_pregacao": user.pontuacao_pregacao, "pontuacao_canto": user.pontuacao_canto}
     return {"access_token": token, "token_type": "bearer", "user": user_dict}
 
-@api_router.get("/auth/me", response_model=UsuarioResponse)
-async def get_me(current_user: Usuario = Depends(get_current_user)):
-    return current_user
+@api_router.get('/auth/me', response_model=UsuarioResponse)
+async def get_me(usuario_atual: Usuario = Depends(get_usuario_atual)):
+    return usuario_atual
 
-@api_router.put("/auth/me", response_model=UsuarioResponse)
-async def update_me(updates: Dict[str, Any], current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+@api_router.put('/auth/me', response_model=UsuarioResponse)
+async def update_me(updates: Dict[str, Any], usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
     allowed_fields = ['nome_completo', 'email', 'telefone', 'periodos_indisponibilidade']
     for key, value in updates.items():
         if key in allowed_fields:
-            setattr(current_user, key, value)
-    current_user.atualizado_em = datetime.now(timezone.utc)
+            setattr(usuario_atual, key, value)
+    usuario_atual.atualizado_em = datetime.now(timezone.utc)
     db.commit()
-    db.refresh(current_user)
-    return current_user
+    db.refresh(usuario_atual)
+    return usuario_atual
 
 # DISTRICTS
-@api_router.get("/districts", response_model=List[DistritoResponse])
-async def get_districts(current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.funcao == 'pastor_distrital':
+@api_router.get('/districts', response_model=List[DistritoResponse])
+async def get_districts(usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    if usuario_atual.funcao == 'pastor_distrital':
         return db.query(Distrito).filter(Distrito.ativo == True).all()
-    return db.query(Distrito).filter(Distrito.id == current_user.id_distrito, Distrito.ativo == True).all()
+    return db.query(Distrito).filter(Distrito.id == usuario_atual.id_distrito, Distrito.ativo == True).all()
 
-@api_router.post("/districts", response_model=DistritoResponse)
-async def create_district(district_data: DistritoCreate, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.funcao != 'pastor_distrital':
+@api_router.post('/districts', response_model=DistritoResponse)
+async def create_district(district_data: DistritoCreate, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    if usuario_atual.funcao != 'pastor_distrital':
         raise HTTPException(status_code=403, detail="Only Pastor Distrital can create districts")
     district = Distrito(**district_data.model_dump())
     db.add(district)
@@ -292,16 +293,16 @@ async def create_district(district_data: DistritoCreate, current_user: Usuario =
     db.refresh(district)
     return district
 
-@api_router.get("/districts/{district_id}", response_model=DistritoResponse)
+@api_router.get('/districts/{district_id}', response_model=DistritoResponse)
 async def get_district(district_id: str, db: Session = Depends(get_db)):
     district = db.query(Distrito).filter(Distrito.id == district_id, Distrito.ativo == True).first()
     if not district:
         raise HTTPException(status_code=404, detail="District not found")
     return district
 
-@api_router.put("/districts/{district_id}", response_model=DistritoResponse)
-async def update_district(district_id: str, updates: Dict[str, Any], current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.funcao != 'pastor_distrital':
+@api_router.put('/districts/{district_id}', response_model=DistritoResponse)
+async def update_district(district_id: str, updates: Dict[str, Any], usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    if usuario_atual.funcao != 'pastor_distrital':
         raise HTTPException(status_code=403, detail="Permission denied")
     district = db.query(Distrito).filter(Distrito.id == district_id).first()
     if not district:
@@ -314,9 +315,9 @@ async def update_district(district_id: str, updates: Dict[str, Any], current_use
     db.refresh(district)
     return district
 
-@api_router.delete("/districts/{district_id}")
-async def delete_district(district_id: str, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.funcao != 'pastor_distrital':
+@api_router.delete('/districts/{district_id}')
+async def delete_district(district_id: str, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    if usuario_atual.funcao != 'pastor_distrital':
         raise HTTPException(status_code=403, detail="Permission denied")
     district = db.query(Distrito).filter(Distrito.id == district_id).first()
     if district:
@@ -325,18 +326,18 @@ async def delete_district(district_id: str, current_user: Usuario = Depends(get_
     return {"message": "District deleted successfully"}
 
 # CHURCHES
-@api_router.get("/churches", response_model=List[IgrejaResponse])
-async def get_churches(id_distrito: Optional[str] = None, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+@api_router.get('/churches', response_model=List[IgrejaResponse])
+async def get_churches(id_distrito: Optional[str] = None, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
     query = db.query(Igreja).filter(Igreja.ativo == True)
     if id_distrito:
         query = query.filter(Igreja.id_distrito == id_distrito)
-    elif current_user.funcao != 'pastor_distrital':
-        query = query.filter(Igreja.id_distrito == current_user.id_distrito)
+    elif usuario_atual.funcao != 'pastor_distrital':
+        query = query.filter(Igreja.id_distrito == usuario_atual.id_distrito)
     return query.all()
 
-@api_router.post("/churches", response_model=IgrejaResponse)
-async def create_church(church_data: IgrejaCreate, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.funcao not in ['pastor_distrital', 'lider_igreja']:
+@api_router.post('/churches', response_model=IgrejaResponse)
+async def create_church(church_data: IgrejaCreate, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    if usuario_atual.funcao not in ['pastor_distrital', 'lider_igreja']:
         raise HTTPException(status_code=403, detail="Permission denied")
     church = Igreja(**church_data.model_dump())
     db.add(church)
@@ -344,16 +345,16 @@ async def create_church(church_data: IgrejaCreate, current_user: Usuario = Depen
     db.refresh(church)
     return church
 
-@api_router.get("/churches/{church_id}", response_model=IgrejaResponse)
+@api_router.get('/churches/{church_id}', response_model=IgrejaResponse)
 async def get_church(church_id: str, db: Session = Depends(get_db)):
     church = db.query(Igreja).filter(Igreja.id == church_id, Igreja.ativo == True).first()
     if not church:
         raise HTTPException(status_code=404, detail="Church not found")
     return church
 
-@api_router.put("/churches/{church_id}", response_model=IgrejaResponse)
-async def update_church(church_id: str, updates: Dict[str, Any], current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.funcao not in ['pastor_distrital', 'lider_igreja']:
+@api_router.put('/churches/{church_id}', response_model=IgrejaResponse)
+async def update_church(church_id: str, updates: Dict[str, Any], usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    if usuario_atual.funcao not in ['pastor_distrital', 'lider_igreja']:
         raise HTTPException(status_code=403, detail="Permission denied")
     church = db.query(Igreja).filter(Igreja.id == church_id).first()
     if not church:
@@ -366,9 +367,9 @@ async def update_church(church_id: str, updates: Dict[str, Any], current_user: U
     db.refresh(church)
     return church
 
-@api_router.delete("/churches/{church_id}")
-async def delete_church(church_id: str, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.funcao not in ['pastor_distrital', 'lider_igreja']:
+@api_router.delete('/churches/{church_id}')
+async def delete_church(church_id: str, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    if usuario_atual.funcao not in ['pastor_distrital', 'lider_igreja']:
         raise HTTPException(status_code=403, detail="Permission denied")
     church = db.query(Igreja).filter(Igreja.id == church_id).first()
     if church:
@@ -377,11 +378,11 @@ async def delete_church(church_id: str, current_user: Usuario = Depends(get_curr
     return {"message": "Church deleted successfully"}
 
 # USERS
-@api_router.get("/users", response_model=List[UsuarioResponse])
-async def get_users(id_distrito: Optional[str] = None, id_igreja: Optional[str] = None, eh_pregador: Optional[bool] = None, eh_cantor: Optional[bool] = None, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+@api_router.get('/users', response_model=List[UsuarioResponse])
+async def get_users(id_distrito: Optional[str] = None, id_igreja: Optional[str] = None, eh_pregador: Optional[bool] = None, eh_cantor: Optional[bool] = None, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
     query = db.query(Usuario).filter(Usuario.ativo == True)
-    if current_user.funcao != 'pastor_distrital':
-        query = query.filter(Usuario.id_distrito == current_user.id_distrito)
+    if usuario_atual.funcao != 'pastor_distrital':
+        query = query.filter(Usuario.id_distrito == usuario_atual.id_distrito)
     if id_distrito:
         query = query.filter(Usuario.id_distrito == id_distrito)
     if id_igreja:
@@ -392,27 +393,27 @@ async def get_users(id_distrito: Optional[str] = None, id_igreja: Optional[str] 
         query = query.filter(Usuario.eh_cantor == eh_cantor)
     return query.all()
 
-@api_router.get("/users/preachers", response_model=List[UsuarioResponse])
-async def get_preachers(id_distrito: Optional[str] = None, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+@api_router.get('/users/preachers', response_model=List[UsuarioResponse])
+async def get_preachers(id_distrito: Optional[str] = None, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
     query = db.query(Usuario).filter(Usuario.ativo == True, Usuario.eh_pregador == True)
     if id_distrito:
         query = query.filter(Usuario.id_distrito == id_distrito)
-    elif current_user.funcao != 'pastor_distrital':
-        query = query.filter(Usuario.id_distrito == current_user.id_distrito)
+    elif usuario_atual.funcao != 'pastor_distrital':
+        query = query.filter(Usuario.id_distrito == usuario_atual.id_distrito)
     return query.all()
 
-@api_router.get("/users/singers", response_model=List[UsuarioResponse])
-async def get_singers(id_distrito: Optional[str] = None, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+@api_router.get('/users/singers', response_model=List[UsuarioResponse])
+async def get_singers(id_distrito: Optional[str] = None, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
     query = db.query(Usuario).filter(Usuario.ativo == True, Usuario.eh_cantor == True)
     if id_distrito:
         query = query.filter(Usuario.id_distrito == id_distrito)
-    elif current_user.funcao != 'pastor_distrital':
-        query = query.filter(Usuario.id_distrito == current_user.id_distrito)
+    elif usuario_atual.funcao != 'pastor_distrital':
+        query = query.filter(Usuario.id_distrito == usuario_atual.id_distrito)
     return query.all()
 
-@api_router.post("/users", response_model=UsuarioResponse)
-async def create_user(user_data: UsuarioCreate, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.funcao not in ['pastor_distrital', 'lider_igreja']:
+@api_router.post('/users', response_model=UsuarioResponse)
+async def create_user(user_data: UsuarioCreate, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    if usuario_atual.funcao not in ['pastor_distrital', 'lider_igreja']:
         raise HTTPException(status_code=403, detail="Permission denied")
     existing = db.query(Usuario).filter(Usuario.nome_usuario == user_data.nome_usuario).first()
     if existing:
@@ -425,16 +426,16 @@ async def create_user(user_data: UsuarioCreate, current_user: Usuario = Depends(
     db.refresh(user)
     return user
 
-@api_router.get("/users/{user_id}", response_model=UsuarioResponse)
+@api_router.get('/users/{user_id}', response_model=UsuarioResponse)
 async def get_user(user_id: str, db: Session = Depends(get_db)):
     user = db.query(Usuario).filter(Usuario.id == user_id, Usuario.ativo == True).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-@api_router.put("/users/{user_id}", response_model=UsuarioResponse)
-async def update_user(user_id: str, updates: Dict[str, Any], current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.funcao not in ['pastor_distrital', 'lider_igreja'] and current_user.id != user_id:
+@api_router.put('/users/{user_id}', response_model=UsuarioResponse)
+async def update_user(user_id: str, updates: Dict[str, Any], usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    if usuario_atual.funcao not in ['pastor_distrital', 'lider_igreja'] and usuario_atual.id != user_id:
         raise HTTPException(status_code=403, detail="Permission denied")
     user = db.query(Usuario).filter(Usuario.id == user_id).first()
     if not user:
@@ -449,9 +450,9 @@ async def update_user(user_id: str, updates: Dict[str, Any], current_user: Usuar
     db.refresh(user)
     return user
 
-@api_router.delete("/users/{user_id}")
-async def delete_user(user_id: str, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.funcao not in ['pastor_distrital', 'lider_igreja']:
+@api_router.delete('/users/{user_id}')
+async def delete_user(user_id: str, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    if usuario_atual.funcao not in ['pastor_distrital', 'lider_igreja']:
         raise HTTPException(status_code=403, detail="Permission denied")
     user = db.query(Usuario).filter(Usuario.id == user_id).first()
     if user:
@@ -460,11 +461,11 @@ async def delete_user(user_id: str, current_user: Usuario = Depends(get_current_
     return {"message": "User deleted successfully"}
 
 # SCHEDULES
-@api_router.get("/schedules", response_model=List[EscalaResponse])
-async def get_schedules(mes: Optional[int] = None, ano: Optional[int] = None, id_igreja: Optional[str] = None, id_distrito: Optional[str] = None, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+@api_router.get('/schedules', response_model=List[EscalaResponse])
+async def get_schedules(mes: Optional[int] = None, ano: Optional[int] = None, id_igreja: Optional[str] = None, id_distrito: Optional[str] = None, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
     query = db.query(Escala)
-    if current_user.funcao != 'pastor_distrital':
-        query = query.filter(Escala.id_distrito == current_user.id_distrito)
+    if usuario_atual.funcao != 'pastor_distrital':
+        query = query.filter(Escala.id_distrito == usuario_atual.id_distrito)
     if mes:
         query = query.filter(Escala.mes == mes)
     if ano:
@@ -480,9 +481,9 @@ async def get_schedules(mes: Optional[int] = None, ano: Optional[int] = None, id
         result.append(EscalaResponse(id=escala.id, mes=escala.mes, ano=escala.ano, id_igreja=escala.id_igreja, id_distrito=escala.id_distrito, id_gerado_por=escala.id_gerado_por, modo_geracao=escala.modo_geracao, status=escala.status, criado_em=escala.criado_em, atualizado_em=escala.atualizado_em, itens=[ItemEscalaData(id=item.id, data=item.data, horario=item.horario, id_pregador=item.id_pregador, ids_cantores=item.ids_cantores or [], status=item.status, motivo_recusa=item.motivo_recusa, confirmado_em=item.confirmado_em, cancelado_em=item.cancelado_em) for item in itens]))
     return result
 
-@api_router.post("/schedules/generate-auto")
-async def generate_schedule_auto(mes: int, ano: int, id_distrito: str, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.funcao not in ['pastor_distrital', 'lider_igreja']:
+@api_router.post('/schedules/generate-auto')
+async def generate_schedule_auto(mes: int, ano: int, id_distrito: str, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    if usuario_atual.funcao not in ['pastor_distrital', 'lider_igreja']:
         raise HTTPException(status_code=403, detail="Permission denied")
     igrejas = db.query(Igreja).filter(Igreja.id_distrito == id_distrito, Igreja.ativo == True).all()
     pregadores = db.query(Usuario).filter(Usuario.id_distrito == id_distrito, Usuario.eh_pregador == True, Usuario.ativo == True).order_by(Usuario.pontuacao_pregacao.desc()).all()
@@ -491,7 +492,7 @@ async def generate_schedule_auto(mes: int, ano: int, id_distrito: str, current_u
         existing = db.query(Escala).filter(Escala.id_igreja == igreja.id, Escala.mes == mes, Escala.ano == ano).first()
         if existing:
             continue
-        escala = Escala(mes=mes, ano=ano, id_igreja=igreja.id, id_distrito=id_distrito, id_gerado_por=current_user.id, modo_geracao='automatico', status='rascunho')
+        escala = Escala(mes=mes, ano=ano, id_igreja=igreja.id, id_distrito=id_distrito, id_gerado_por=usuario_atual.id, modo_geracao='automatico', status='rascunho')
         db.add(escala)
         db.flush()
         horarios_culto = igreja.horarios_culto or []
@@ -527,9 +528,9 @@ async def generate_schedule_auto(mes: int, ano: int, id_distrito: str, current_u
     db.commit()
     return {"message": f"Geradas {len(escalas_geradas)} escalas", "escalas": [e.id for e in escalas_geradas]}
 
-@api_router.post("/schedules/manual", response_model=EscalaResponse)
-async def create_manual_schedule(schedule_data: EscalaCreate, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.funcao not in ['pastor_distrital', 'lider_igreja']:
+@api_router.post('/schedules/manual', response_model=EscalaResponse)
+async def create_manual_schedule(schedule_data: EscalaCreate, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    if usuario_atual.funcao not in ['pastor_distrital', 'lider_igreja']:
         raise HTTPException(status_code=403, detail="Permission denied")
     existing = db.query(Escala).filter(Escala.id_igreja == schedule_data.id_igreja, Escala.mes == schedule_data.mes, Escala.ano == schedule_data.ano).first()
     if existing:
@@ -537,7 +538,7 @@ async def create_manual_schedule(schedule_data: EscalaCreate, current_user: Usua
     igreja = db.query(Igreja).filter(Igreja.id == schedule_data.id_igreja).first()
     if not igreja:
         raise HTTPException(status_code=404, detail="Church not found")
-    escala = Escala(mes=schedule_data.mes, ano=schedule_data.ano, id_igreja=schedule_data.id_igreja, id_distrito=igreja.id_distrito, id_gerado_por=current_user.id, modo_geracao='manual', status='rascunho')
+    escala = Escala(mes=schedule_data.mes, ano=schedule_data.ano, id_igreja=schedule_data.id_igreja, id_distrito=igreja.id_distrito, id_gerado_por=usuario_atual.id, modo_geracao='manual', status='rascunho')
     db.add(escala)
     db.flush()
     horarios_culto = igreja.horarios_culto or []
@@ -558,7 +559,7 @@ async def create_manual_schedule(schedule_data: EscalaCreate, current_user: Usua
     itens = db.query(ItemEscala).filter(ItemEscala.id_escala == escala.id).all()
     return EscalaResponse(id=escala.id, mes=escala.mes, ano=escala.ano, id_igreja=escala.id_igreja, id_distrito=escala.id_distrito, id_gerado_por=escala.id_gerado_por, modo_geracao=escala.modo_geracao, status=escala.status, criado_em=escala.criado_em, atualizado_em=escala.atualizado_em, itens=[ItemEscalaData(id=item.id, data=item.data, horario=item.horario, id_pregador=item.id_pregador, ids_cantores=item.ids_cantores or [], status=item.status, motivo_recusa=item.motivo_recusa, confirmado_em=item.confirmado_em, cancelado_em=item.cancelado_em) for item in itens])
 
-@api_router.get("/schedules/{schedule_id}")
+@api_router.get('/schedules/{schedule_id}')
 async def get_schedule(schedule_id: str, db: Session = Depends(get_db)):
     escala = db.query(Escala).filter(Escala.id == schedule_id).first()
     if not escala:
@@ -566,8 +567,8 @@ async def get_schedule(schedule_id: str, db: Session = Depends(get_db)):
     itens = db.query(ItemEscala).filter(ItemEscala.id_escala == escala.id).all()
     return EscalaResponse(id=escala.id, mes=escala.mes, ano=escala.ano, id_igreja=escala.id_igreja, id_distrito=escala.id_distrito, id_gerado_por=escala.id_gerado_por, modo_geracao=escala.modo_geracao, status=escala.status, criado_em=escala.criado_em, atualizado_em=escala.atualizado_em, itens=[ItemEscalaData(id=item.id, data=item.data, horario=item.horario, id_pregador=item.id_pregador, ids_cantores=item.ids_cantores or [], status=item.status, motivo_recusa=item.motivo_recusa, confirmado_em=item.confirmado_em, cancelado_em=item.cancelado_em) for item in itens])
 
-@api_router.put("/schedules/{schedule_id}/items/{item_id}")
-async def update_schedule_item(schedule_id: str, item_id: str, id_pregador: Optional[str] = None, ids_cantores: Optional[List[str]] = None, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+@api_router.put('/schedules/{schedule_id}/items/{item_id}')
+async def update_schedule_item(schedule_id: str, item_id: str, id_pregador: Optional[str] = None, ids_cantores: Optional[List[str]] = None, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
     item = db.query(ItemEscala).filter(ItemEscala.id == item_id, ItemEscala.id_escala == schedule_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Schedule item not found")
@@ -584,8 +585,8 @@ async def update_schedule_item(schedule_id: str, item_id: str, id_pregador: Opti
     db.commit()
     return {"message": "Schedule item updated"}
 
-@api_router.post("/schedules/{schedule_id}/confirm")
-async def confirm_schedule(schedule_id: str, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+@api_router.post('/schedules/{schedule_id}/confirm')
+async def confirm_schedule(schedule_id: str, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
     escala = db.query(Escala).filter(Escala.id == schedule_id).first()
     if not escala:
         raise HTTPException(status_code=404, detail="Schedule not found")
@@ -614,31 +615,31 @@ async def confirm_schedule(schedule_id: str, current_user: Usuario = Depends(get
                     enviar_notificacao_mock(cantor.telefone, mensagem)
     return {"message": "Schedule confirmed and notifications sent"}
 
-@api_router.post("/schedule-items/{item_id}/confirm")
-async def confirm_participation(item_id: str, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+@api_router.post('/schedule-items/{item_id}/confirm')
+async def confirm_participation(item_id: str, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
     item = db.query(ItemEscala).filter(ItemEscala.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Schedule item not found")
-    if item.id_pregador != current_user.id and current_user.id not in (item.ids_cantores or []):
+    if item.id_pregador != usuario_atual.id and usuario_atual.id not in (item.ids_cantores or []):
         raise HTTPException(status_code=403, detail="You are not assigned to this schedule")
     item.status = 'confirmado'
     item.confirmado_em = datetime.now(timezone.utc)
     db.commit()
     return {"message": "Participation confirmed"}
 
-@api_router.post("/schedule-items/{item_id}/refuse")
-async def refuse_participation(item_id: str, motivo: str, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+@api_router.post('/schedule-items/{item_id}/refuse')
+async def refuse_participation(item_id: str, motivo: str, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
     item = db.query(ItemEscala).filter(ItemEscala.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Schedule item not found")
     escala = db.query(Escala).filter(Escala.id == item.id_escala).first()
     igreja = db.query(Igreja).filter(Igreja.id == escala.id_igreja).first()
     distrito = db.query(Distrito).filter(Distrito.id == escala.id_distrito).first()
-    tipo_membro = 'pregador' if item.id_pregador == current_user.id else 'cantor'
-    if item.id_pregador == current_user.id:
+    tipo_membro = 'pregador' if item.id_pregador == usuario_atual.id else 'cantor'
+    if item.id_pregador == usuario_atual.id:
         item.id_pregador = None
-    elif current_user.id in (item.ids_cantores or []):
-        item.ids_cantores.remove(current_user.id)
+    elif usuario_atual.id in (item.ids_cantores or []):
+        item.ids_cantores.remove(usuario_atual.id)
     else:
         raise HTTPException(status_code=403, detail="You are not assigned to this schedule")
     item.status = 'recusado'
@@ -646,7 +647,7 @@ async def refuse_participation(item_id: str, motivo: str, current_user: Usuario 
     db.commit()
     pastor = db.query(Usuario).filter(Usuario.id == distrito.id_pastor).first()
     if pastor:
-        mensagem = f"{current_user.nome_completo} ({tipo_membro}) recusou a escala em {igreja.nome} no dia {item.data} às {item.horario}. Motivo: {motivo}"
+        mensagem = f"{usuario_atual.nome_completo} ({tipo_membro}) recusou a escala em {igreja.nome} no dia {item.data} às {item.horario}. Motivo: {motivo}"
         criar_notificacao(db, pastor.id, 'recusa_escala', 'Recusa de Escala', mensagem, item_id)
         if pastor.telefone:
             enviar_notificacao_mock(pastor.telefone, mensagem)
@@ -656,8 +657,8 @@ async def refuse_participation(item_id: str, motivo: str, current_user: Usuario 
             criar_notificacao(db, lider.id, 'recusa_escala', 'Recusa de Escala', mensagem, item_id)
     return {"message": "Participation refused"}
 
-@api_router.post("/schedule-items/{item_id}/cancel")
-async def cancel_participation(item_id: str, motivo: str, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+@api_router.post('/schedule-items/{item_id}/cancel')
+async def cancel_participation(item_id: str, motivo: str, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
     item = db.query(ItemEscala).filter(ItemEscala.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Schedule item not found")
@@ -670,35 +671,35 @@ async def cancel_participation(item_id: str, motivo: str, current_user: Usuario 
     item.status = 'cancelado'
     item.cancelado_em = datetime.now(timezone.utc)
     item.motivo_recusa = motivo
-    if item.id_pregador == current_user.id:
+    if item.id_pregador == usuario_atual.id:
         item.id_pregador = None
-    elif current_user.id in (item.ids_cantores or []):
-        item.ids_cantores.remove(current_user.id)
+    elif usuario_atual.id in (item.ids_cantores or []):
+        item.ids_cantores.remove(usuario_atual.id)
     db.commit()
     return {"message": "Participation cancelled"}
 
-@api_router.post("/schedule-items/{item_id}/volunteer")
-async def volunteer_for_slot(item_id: str, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+@api_router.post('/schedule-items/{item_id}/volunteer')
+async def volunteer_for_slot(item_id: str, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
     item = db.query(ItemEscala).filter(ItemEscala.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Schedule item not found")
     if item.id_pregador:
         raise HTTPException(status_code=400, detail="Slot is already filled")
-    if not usuario_disponivel(db, current_user.id, item.data):
+    if not usuario_disponivel(db, usuario_atual.id, item.data):
         raise HTTPException(status_code=400, detail="You are not available on this date")
-    if slot_ocupado(db, current_user.id, item.data):
+    if slot_ocupado(db, usuario_atual.id, item.data):
         raise HTTPException(status_code=400, detail="You are already scheduled on this date")
-    if current_user.eh_pregador:
-        item.id_pregador = current_user.id
+    if usuario_atual.eh_pregador:
+        item.id_pregador = usuario_atual.id
         item.status = 'confirmado'
         db.commit()
     else:
         raise HTTPException(status_code=400, detail="You must be a preacher to volunteer")
     return {"message": "Successfully volunteered for slot"}
 
-@api_router.delete("/schedules/{schedule_id}")
-async def delete_schedule(schedule_id: str, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.funcao not in ['pastor_distrital', 'lider_igreja']:
+@api_router.delete('/schedules/{schedule_id}')
+async def delete_schedule(schedule_id: str, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    if usuario_atual.funcao not in ['pastor_distrital', 'lider_igreja']:
         raise HTTPException(status_code=403, detail="Permission denied")
     escala = db.query(Escala).filter(Escala.id == schedule_id).first()
     if escala:
@@ -708,7 +709,7 @@ async def delete_schedule(schedule_id: str, current_user: Usuario = Depends(get_
     return {"message": "Schedule deleted successfully"}
 
 # EVALUATIONS
-@api_router.post("/evaluations", response_model=AvaliacaoResponse)
+@api_router.post('/evaluations', response_model=AvaliacaoResponse)
 async def create_evaluation(eval_data: AvaliacaoCreate, db: Session = Depends(get_db)):
     evaluation = Avaliacao(**eval_data.model_dump())
     db.add(evaluation)
@@ -724,91 +725,91 @@ async def create_evaluation(eval_data: AvaliacaoCreate, db: Session = Depends(ge
     db.refresh(evaluation)
     return evaluation
 
-@api_router.get("/evaluations/by-user/{user_id}", response_model=List[AvaliacaoResponse])
-async def get_evaluations_by_user(user_id: str, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+@api_router.get('/evaluations/by-user/{user_id}', response_model=List[AvaliacaoResponse])
+async def get_evaluations_by_user(user_id: str, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
     return db.query(Avaliacao).filter(Avaliacao.id_usuario_avaliado == user_id).all()
 
 # NOTIFICATIONS
-@api_router.get("/notifications", response_model=List[NotificacaoResponse])
-async def get_notifications(current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.query(Notificacao).filter(Notificacao.id_usuario == current_user.id).order_by(Notificacao.criado_em.desc()).limit(100).all()
+@api_router.get('/notifications', response_model=List[NotificacaoResponse])
+async def get_notifications(usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    return db.query(Notificacao).filter(Notificacao.id_usuario == usuario_atual.id).order_by(Notificacao.criado_em.desc()).limit(100).all()
 
-@api_router.put("/notifications/{notification_id}/read")
-async def mark_notification_read(notification_id: str, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    notif = db.query(Notificacao).filter(Notificacao.id == notification_id, Notificacao.id_usuario == current_user.id).first()
+@api_router.put('/notifications/{notification_id}/read')
+async def mark_notification_read(notification_id: str, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    notif = db.query(Notificacao).filter(Notificacao.id == notification_id, Notificacao.id_usuario == usuario_atual.id).first()
     if notif:
         notif.status = "lida"
         db.commit()
     return {"message": "Notification marked as read"}
 
-@api_router.put("/notifications/mark-all-read")
-async def mark_all_notifications_read(current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    db.query(Notificacao).filter(Notificacao.id_usuario == current_user.id, Notificacao.status == "nao_lida").update({"status": "lida"})
+@api_router.put('/notifications/mark-all-read')
+async def mark_all_notifications_read(usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    db.query(Notificacao).filter(Notificacao.id_usuario == usuario_atual.id, Notificacao.status == "nao_lida").update({"status": "lida"})
     db.commit()
     return {"message": "All notifications marked as read"}
 
 # SUBSTITUTIONS
-@api_router.post("/substitutions")
-async def create_substitution_request(sub_data: SolicitacaoTrocaCreate, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    substitution = SolicitacaoTroca(**sub_data.model_dump(), id_solicitante=current_user.id)
+@api_router.post('/substitutions')
+async def create_substitution_request(sub_data: SolicitacaoTrocaCreate, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    substitution = SolicitacaoTroca(**sub_data.model_dump(), id_solicitante=usuario_atual.id)
     db.add(substitution)
     db.commit()
-    criar_notificacao(db, sub_data.id_usuario_alvo, 'solicitacao_troca', 'Solicitação de Troca de Escala', f"{current_user.nome_completo} solicitou trocar a escala com você. Motivo: {sub_data.motivo}", substitution.id)
+    criar_notificacao(db, sub_data.id_usuario_alvo, 'solicitacao_troca', 'Solicitação de Troca de Escala', f"{usuario_atual.nome_completo} solicitou trocar a escala com você. Motivo: {sub_data.motivo}", substitution.id)
     return {"message": "Substitution request created"}
 
-@api_router.post("/substitutions/{sub_id}/accept")
-async def accept_substitution(sub_id: str, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+@api_router.post('/substitutions/{sub_id}/accept')
+async def accept_substitution(sub_id: str, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
     sub = db.query(SolicitacaoTroca).filter(SolicitacaoTroca.id == sub_id).first()
-    if not sub or sub.id_usuario_alvo != current_user.id:
+    if not sub or sub.id_usuario_alvo != usuario_atual.id:
         raise HTTPException(status_code=403, detail="Permission denied")
     sub.status = "aceita"
     sub.respondido_em = datetime.now(timezone.utc)
     item = db.query(ItemEscala).filter(ItemEscala.id == sub.id_item_escala_original).first()
     if item:
         if item.id_pregador == sub.id_solicitante:
-            item.id_pregador = current_user.id
+            item.id_pregador = usuario_atual.id
         elif sub.id_solicitante in (item.ids_cantores or []):
             item.ids_cantores.remove(sub.id_solicitante)
-            item.ids_cantores.append(current_user.id)
+            item.ids_cantores.append(usuario_atual.id)
     db.commit()
-    criar_notificacao(db, sub.id_solicitante, 'troca_aceita', 'Troca Aceita', f"Sua solicitação de troca foi aceita por {current_user.nome_completo}", sub_id)
+    criar_notificacao(db, sub.id_solicitante, 'troca_aceita', 'Troca Aceita', f"Sua solicitação de troca foi aceita por {usuario_atual.nome_completo}", sub_id)
     return {"message": "Substitution accepted"}
 
-@api_router.post("/substitutions/{sub_id}/reject")
-async def reject_substitution(sub_id: str, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+@api_router.post('/substitutions/{sub_id}/reject')
+async def reject_substitution(sub_id: str, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
     sub = db.query(SolicitacaoTroca).filter(SolicitacaoTroca.id == sub_id).first()
-    if not sub or sub.id_usuario_alvo != current_user.id:
+    if not sub or sub.id_usuario_alvo != usuario_atual.id:
         raise HTTPException(status_code=403, detail="Permission denied")
     sub.status = "rejeitada"
     sub.respondido_em = datetime.now(timezone.utc)
     db.commit()
-    criar_notificacao(db, sub.id_solicitante, 'troca_rejeitada', 'Troca Recusada', f"Sua solicitação de troca foi recusada por {current_user.nome_completo}", sub_id)
+    criar_notificacao(db, sub.id_solicitante, 'troca_rejeitada', 'Troca Recusada', f"Sua solicitação de troca foi recusada por {usuario_atual.nome_completo}", sub_id)
     return {"message": "Substitution rejected"}
 
-@api_router.get("/substitutions/pending")
-async def get_pending_substitutions(current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.query(SolicitacaoTroca).filter(SolicitacaoTroca.id_usuario_alvo == current_user.id, SolicitacaoTroca.status == "pendente").all()
+@api_router.get('/substitutions/pending')
+async def get_pending_substitutions(usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    return db.query(SolicitacaoTroca).filter(SolicitacaoTroca.id_usuario_alvo == usuario_atual.id, SolicitacaoTroca.status == "pendente").all()
 
 # DELEGATIONS
-@api_router.post("/delegations")
-async def create_delegation(delegation_data: DelegacaoCreate, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.funcao != 'pastor_distrital':
+@api_router.post('/delegations')
+async def create_delegation(delegation_data: DelegacaoCreate, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    if usuario_atual.funcao != 'pastor_distrital':
         raise HTTPException(status_code=403, detail="Only Pastor Distrital can delegate")
-    delegation = Delegacao(**delegation_data.model_dump(), id_delegado_por=current_user.id)
+    delegation = Delegacao(**delegation_data.model_dump(), id_delegado_por=usuario_atual.id)
     db.add(delegation)
     db.commit()
     return {"message": "Delegation created"}
 
-@api_router.get("/delegations")
-async def get_delegations(id_distrito: Optional[str] = None, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+@api_router.get('/delegations')
+async def get_delegations(id_distrito: Optional[str] = None, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
     query = db.query(Delegacao).filter(Delegacao.ativo == True)
     if id_distrito:
         query = query.filter(Delegacao.id_distrito == id_distrito)
     return query.all()
 
-@api_router.delete("/delegations/{delegation_id}")
-async def delete_delegation(delegation_id: str, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.funcao != 'pastor_distrital':
+@api_router.delete('/delegations/{delegation_id}')
+async def delete_delegation(delegation_id: str, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    if usuario_atual.funcao != 'pastor_distrital':
         raise HTTPException(status_code=403, detail="Permission denied")
     delegation = db.query(Delegacao).filter(Delegacao.id == delegation_id).first()
     if delegation:
@@ -817,16 +818,16 @@ async def delete_delegation(delegation_id: str, current_user: Usuario = Depends(
     return {"message": "Delegation deleted"}
 
 # ANALYTICS
-@api_router.get("/analytics/dashboard")
-async def get_analytics_dashboard(id_distrito: str, current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.funcao != 'pastor_distrital':
+@api_router.get('/analytics/dashboard')
+async def get_analytics_dashboard(id_distrito: str, usuario_atual: Usuario = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+    if usuario_atual.funcao != 'pastor_distrital':
         raise HTTPException(status_code=403, detail="Permission denied")
-    total_churches = db.query(Igreja).filter(Igreja.id_distrito == id_distrito, Igreja.ativo == True).count()
-    total_preachers = db.query(Usuario).filter(Usuario.id_distrito == id_distrito, Usuario.eh_pregador == True, Usuario.ativo == True).count()
-    total_singers = db.query(Usuario).filter(Usuario.id_distrito == id_distrito, Usuario.eh_cantor == True, Usuario.ativo == True).count()
-    preachers = db.query(Usuario).filter(Usuario.id_distrito == id_distrito, Usuario.eh_pregador == True, Usuario.ativo == True).order_by(Usuario.pontuacao_pregacao.desc()).limit(10).all()
-    evaluations = db.query(Avaliacao).order_by(Avaliacao.criado_em.desc()).limit(20).all()
-    return {"total_churches": total_churches, "total_preachers": total_preachers, "total_singers": total_singers, "top_preachers": preachers, "recent_evaluations": evaluations}
+    total_igrejas = db.query(Igreja).filter(Igreja.id_distrito == id_distrito, Igreja.ativo == True).count()
+    total_pregadores = db.query(Usuario).filter(Usuario.id_distrito == id_distrito, Usuario.eh_pregador == True, Usuario.ativo == True).count()
+    total_cantores = db.query(Usuario).filter(Usuario.id_distrito == id_distrito, Usuario.eh_cantor == True, Usuario.ativo == True).count()
+    pregadores = db.query(Usuario).filter(Usuario.id_distrito == id_distrito, Usuario.eh_pregador == True, Usuario.ativo == True).order_by(Usuario.pontuacao_pregacao.desc()).limit(10).all()
+    avaliacoes = db.query(Avaliacao).order_by(Avaliacao.criado_em.desc()).limit(20).all()
+    return {"total_igrejas": total_igrejas, "total_pregadores": total_pregadores, "total_cantores": total_cantores, "top_pregadores": pregadores, "avaliacoes_recentes": avaliacoes}
 
 app.include_router(api_router)
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','), allow_methods=["*"], allow_headers=["*"])
