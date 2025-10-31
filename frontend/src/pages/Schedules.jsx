@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 export default function Schedules() {
   const [schedules, setSchedules] = useState([]);
   const [churches, setChurches] = useState([]);
+  const [districts, setDistricts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
@@ -24,12 +25,14 @@ export default function Schedules() {
 
   const loadData = async () => {
     try {
-      const [schedulesRes, churchesRes] = await Promise.all([
+      const [schedulesRes, churchesRes, districtsRes] = await Promise.all([
         axios.get(`${API}/schedules`),
-        axios.get(`${API}/churches`)
+        axios.get(`${API}/churches`),
+        axios.get(`${API}/districts`)
       ]);
       setSchedules(schedulesRes.data);
       setChurches(churchesRes.data);
+      setDistricts(districtsRes.data);
     } catch (error) {
       toast.error('Erro ao carregar escalas');
     } finally {
@@ -58,11 +61,11 @@ export default function Schedules() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'draft':
+      case 'rascunho':
         return 'bg-yellow-100 text-yellow-800';
-      case 'confirmed':
+      case 'confirmada':
         return 'bg-blue-100 text-blue-800';
-      case 'active':
+      case 'ativa':
         return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -71,11 +74,11 @@ export default function Schedules() {
 
   const getStatusLabel = (status) => {
     switch (status) {
-      case 'draft':
+      case 'rascunho':
         return 'Rascunho';
-      case 'confirmed':
+      case 'confirmada':
         return 'Confirmada';
-      case 'active':
+      case 'ativa':
         return 'Ativa';
       default:
         return status;
@@ -117,6 +120,7 @@ export default function Schedules() {
             const filledItems = schedule.items?.filter(item => item.id_pregador).length || 0;
             const totalItems = schedule.items?.length || 0;
             const completionRate = totalItems > 0 ? Math.round((filledItems / totalItems) * 100) : 0;
+            const district = districts.find(d => d.id === church?.id_distrito);
 
             return (
               <Card key={schedule.id} className="hover:shadow-lg transition-all" data-testid={`schedule-card-${schedule.id}`}>
@@ -127,6 +131,7 @@ export default function Schedules() {
                         <CalendarIcon className="h-5 w-5 text-purple-600" />
                         <span>{getMonthName(schedule.mes)} de {schedule.ano}</span>
                       </CardTitle>
+                      <p className="text-sm text-gray-600 font-medium">{district?.nome || 'Distrito não encontrado'}</p>
                       <p className="text-sm text-gray-600 font-medium">{church?.nome || 'Igreja não encontrada'}</p>
                     </div>
                     <Badge className={getStatusColor(schedule.status)}>
